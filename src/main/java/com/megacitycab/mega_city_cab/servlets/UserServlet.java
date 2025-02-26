@@ -3,6 +3,8 @@ package com.megacitycab.mega_city_cab.servlets;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.json.simple.JSONObject;
 
@@ -22,6 +24,7 @@ import java.util.Date;
 import java.util.Objects;
 
 import static com.megacitycab.mega_city_cab.config.Security.createJWT;
+import static com.megacitycab.mega_city_cab.config.Security.isValidAdminJWT;
 import static com.megacitycab.mega_city_cab.util.AESEncryption.decrypt;
 import static com.megacitycab.mega_city_cab.util.AESEncryption.encrypt;
 import static com.megacitycab.mega_city_cab.util.JsonPasser.jsonPasser;
@@ -57,7 +60,65 @@ public class UserServlet extends HttpServlet {
 
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doDelete(req, resp);
+        Jws<Claims> claims = isValidAdminJWT(req, resp);
+        JsonObjectBuilder response = Json.createObjectBuilder();
+        PrintWriter writer = resp.getWriter();
+        resp.setContentType("application/json");
+
+        if(claims != null) {
+            Object role = claims.getBody().get("role");
+            Object id = claims.getBody().get("userID");
+
+            if (id == null) {
+                response.add("message", "Unauthorized Request");
+                response.add("code", 403);
+                resp.setStatus(403);
+                writer.print(response.build());
+                writer.close();
+                return; // Exit the method if unauthorized
+            }
+
+            BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
+
+            try (Connection connection = ds.getConnection()) {
+                Integer id1 = Integer.valueOf(req.getParameter("id"));
+
+                // Step 1: Delete from user_has_role first
+                PreparedStatement deleteUserRoleStatement = connection.prepareStatement(
+                        "DELETE FROM user_has_role WHERE user_id = ?"
+                );
+                deleteUserRoleStatement.setObject(1, id1);
+                deleteUserRoleStatement.executeUpdate();
+
+                // Step 2: Delete the user
+                PreparedStatement deleteUserStatement = connection.prepareStatement(
+                        "DELETE FROM user WHERE id = ?"
+                );
+                deleteUserStatement.setObject(1, id1);
+                int i = deleteUserStatement.executeUpdate();
+
+                if (i > 0) {
+                    response.add("message", "success");
+                    response.add("code", 200);
+                } else {
+                    response.add("message", "User not found");
+                    response.add("code", 404);
+                }
+            } catch (Exception e) {
+                e.printStackTrace(); // Log the exception for debugging
+                response.add("message", "Internal server error");
+                response.add("code", 500);
+            } finally {
+                writer.print(response.build());
+                writer.close();
+            }
+        } else {
+            response.add("message", "Unauthorized Request");
+            response.add("code", 403);
+            resp.setStatus(403);
+            writer.print(response.build());
+            writer.close();
+        }
     }
 
     private void userRegister(HttpServletRequest req, HttpServletResponse resp) throws IOException {
