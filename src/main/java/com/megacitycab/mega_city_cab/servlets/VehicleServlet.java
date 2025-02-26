@@ -427,6 +427,58 @@ public class VehicleServlet extends HttpServlet {
 
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doDelete(req, resp);
+        Jws<Claims> claims = isValidAdminJWT(req, resp);
+        if (!Objects.equals(claims, null)) {
+            JsonObjectBuilder response = Json.createObjectBuilder();
+            PrintWriter writer = resp.getWriter();
+            resp.setContentType("application/json");
+
+            int vehicleId = Integer.parseInt(req.getParameter("vehicleId"));
+            BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
+            Connection connection = null;
+            try {
+                connection = ds.getConnection();
+                connection.setAutoCommit(false); // Start transaction
+
+                PreparedStatement pstm = connection.prepareStatement("DELETE FROM vehicle WHERE vehicleId=?");
+                pstm.setObject(1, vehicleId);
+                int i1 = pstm.executeUpdate();
+
+                if (i1 > 0) {
+                    response.add("message", "Driver delete success");
+                    response.add("code", 200);
+                } else {
+                    response.add("message", "driver not found");
+                    response.add("code", 404);
+                }
+
+            } catch (SQLException throwables) {
+                if (connection != null) {
+                    try {
+                        // If any SQL exception occurs, rollback the transaction
+                        connection.rollback();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+                throwables.printStackTrace();
+                response.add("message", "you cant change anything");
+                response.add("code", 400);
+                resp.setStatus(400);
+                writer.print(response.build());
+            } finally {
+                if (connection != null) {
+                    try {
+                        // Restore auto-commit mode and close the connection
+                        connection.setAutoCommit(true);
+                        connection.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+                writer.close();
+            }
+        }
+
     }
 }
