@@ -55,7 +55,73 @@ public class UserServlet extends HttpServlet {
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doPut(req, resp);
+        Jws<Claims> claims = isValidAdminJWT(req, resp);
+        JsonObjectBuilder response = Json.createObjectBuilder();
+        PrintWriter writer = resp.getWriter();
+        resp.setContentType("application/json");
+
+        if (claims != null) {
+            Object role = claims.getBody().get("role");
+            Object id = claims.getBody().get("userID");
+
+            if (id == null) {
+                response.add("message", "Unauthorized Request");
+                response.add("code", 403);
+                resp.setStatus(403);
+                writer.print(response.build());
+                writer.close();
+                return; // Exit the method if unauthorized
+            }
+
+            BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
+            try (Connection connection = ds.getConnection()) {
+                // First, check if the user exists
+                PreparedStatement checkStatement = connection.prepareStatement("SELECT * FROM user WHERE id = ?");
+                checkStatement.setObject(1, id);
+                ResultSet resultSet = checkStatement.executeQuery();
+
+                if (resultSet.next()) {
+                    // Parse the JSON request body
+                    JSONObject jsonObject = jsonPasser(req);
+
+                    // Update the user details
+                    PreparedStatement updateStatement = connection.prepareStatement(
+                            "UPDATE user SET name = ?, email = ?, password = ? WHERE id = ?"
+                    );
+                    updateStatement.setObject(1, jsonObject.get("name").toString());
+                    updateStatement.setObject(2, jsonObject.get("email").toString());
+                    updateStatement.setObject(3, jsonObject.get("password").toString().isEmpty()
+                            ? resultSet.getString("password")
+                            : encrypt(jsonObject.get("password").toString()));
+                    updateStatement.setObject(4, Integer.parseInt(id.toString()));
+
+                    int rowsUpdated = updateStatement.executeUpdate();
+                    if (rowsUpdated > 0) {
+                        response.add("message", "Update successful");
+                        response.add("code", 204);
+                    } else {
+                        response.add("message", "Update failed");
+                        response.add("code", 500);
+                    }
+                } else {
+                    response.add("message", "User not found");
+                    response.add("code", 404);
+                }
+            } catch (Exception e) {
+                e.printStackTrace(); // Log the exception for debugging
+                response.add("message", "Internal server error");
+                response.add("code", 500);
+            } finally {
+                writer.print(response.build());
+                writer.close();
+            }
+        } else {
+            response.add("message", "Unauthorized Request");
+            response.add("code", 403);
+            resp.setStatus(403);
+            writer.print(response.build());
+            writer.close();
+        }
     }
 
     @Override
