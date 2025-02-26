@@ -479,6 +479,5 @@ public class VehicleServlet extends HttpServlet {
                 writer.close();
             }
         }
-
     }
 }
