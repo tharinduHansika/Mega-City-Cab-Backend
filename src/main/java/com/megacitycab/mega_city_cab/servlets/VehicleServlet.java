@@ -6,6 +6,7 @@ import org.apache.commons.dbcp2.BasicDataSource;
 import org.json.simple.JSONObject;
 
 import javax.json.Json;
+import javax.json.JsonArrayBuilder;
 import javax.json.JsonObjectBuilder;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -28,7 +29,122 @@ import static com.megacitycab.mega_city_cab.util.JsonPasser.jsonPasser;
 public class VehicleServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doGet(req, resp);
+        String action = req.getParameter("action");
+        if (action.equals("all")) {
+            getAllVehicles(req, resp);
+        }else if (action.equals("by-user")){
+            getAllVehiclesbyVehicleId(req, resp);
+        }
+    }
+
+    private void getAllVehiclesbyVehicleId(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException{
+        Jws<Claims> claims = isValidAdminJWT(req, resp);
+        JsonObjectBuilder response = Json.createObjectBuilder();
+        PrintWriter writer = resp.getWriter();
+        resp.setContentType("application/json");
+
+        BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
+
+        try {
+            JSONObject json = jsonPasser(req);
+
+            int vehicleId = Integer.parseInt(json.get("vehicleId").toString());
+
+            Connection connection = ds.getConnection();
+            PreparedStatement statement = connection.prepareStatement("select * from vehicle where vehicleId=?");
+            statement.setObject(1,vehicleId);
+            ResultSet resultSet = statement.executeQuery();
+            JsonArrayBuilder driversArray = Json.createArrayBuilder();
+            while (resultSet.next()) {
+                JsonObjectBuilder drivers = Json.createObjectBuilder();
+                drivers.add("vehicleId",resultSet.getInt(1));
+                drivers.add("VehicleNumber",resultSet.getString(2));
+                drivers.add("vehicleType",resultSet.getInt(3));
+                drivers.add("passengerCount",resultSet.getString(4));
+                drivers.add("pricePerKm", resultSet.getString(5));
+                drivers.add("vehicleBrand",resultSet.getString(6));
+                drivers.add("status",resultSet.getString(7));
+                drivers.add("vehicleModel",resultSet.getString(8));
+
+                driversArray.add(drivers);
+            }
+            response.add("data", driversArray);
+            response.add("message", "success");
+            response.add("code", 200);
+            writer.print(response.build());
+            writer.close();
+            connection.close();
+
+
+        }catch(Exception e){
+            e.printStackTrace(); // Log the exception for debugging
+            response.add("message", "Internal server error");
+            response.add("code", 500);
+        } finally{
+            writer.print(response.build());
+            writer.close();
+
+        }
+    }
+
+    private void getAllVehicles(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        Jws<Claims> claims = isValidAdminJWT(req, resp);
+        JsonObjectBuilder response = Json.createObjectBuilder();
+        PrintWriter writer = resp.getWriter();
+        resp.setContentType("application/json");
+
+        if (claims != null) {
+            Object role = claims.getBody().get("role");
+            Object id = claims.getBody().get("userID");
+
+            if (id == null) {
+                response.add("message", "Unauthorized Request");
+                response.add("code", 403);
+                resp.setStatus(403);
+                writer.print(response.build());
+                writer.close();
+                return; // Exit the method if unauthorized
+            }
+
+            BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
+            Connection connection = null;
+
+            try {
+                connection = ds.getConnection();
+                PreparedStatement statement = connection.prepareStatement("SELECT * FROM vehicle");
+                ResultSet resultSet = statement.executeQuery();
+                JsonArrayBuilder driversArray = Json.createArrayBuilder();
+                while (resultSet.next()) {
+                    JsonObjectBuilder vehicles = Json.createObjectBuilder();
+                    vehicles.add("vehicleId",resultSet.getInt(1));
+                    vehicles.add("vehicleNumber",resultSet.getString(2));
+                    vehicles.add("vehicleType",resultSet.getString(3));
+                    vehicles.add("passengerCount",resultSet.getInt(4));
+                    vehicles.add("pricePerKm", resultSet.getDouble(5));
+                    vehicles.add("vehicleBrand",resultSet.getString(6));
+                    vehicles.add("status",resultSet.getString(7));
+                    vehicles.add("vehicleModel",resultSet.getString(8));
+                    driversArray.add(vehicles);
+                }
+                response.add("data", driversArray);
+                response.add("message", "success");
+                response.add("code", 200);
+                writer.print(response.build());
+                writer.close();
+                connection.close();
+
+
+            }catch(Exception e){
+                e.printStackTrace(); // Log the exception for debugging
+                response.add("message", "Internal server error");
+                response.add("code", 500);
+            } finally{
+                writer.print(response.build());
+                writer.close();
+
+            }
+
+        }
     }
 
     @Override
