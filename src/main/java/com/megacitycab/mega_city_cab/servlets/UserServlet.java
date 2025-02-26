@@ -174,6 +174,7 @@ public class UserServlet extends HttpServlet {
         JsonObjectBuilder response = Json.createObjectBuilder();
         PrintWriter writer = resp.getWriter();
         resp.setContentType("application/json");
+        System.out.println(response);
 
 //        String userName = req.getParameter("userName");
 //        String userPassword = req.getParameter("password");
@@ -201,7 +202,7 @@ public class UserServlet extends HttpServlet {
 
                             PreparedStatement pstm1 = connection.prepareStatement("select r.role\n" +
                                     "from user_has_role uhr\n" +
-                                    "         left join mcc.role r on r.id = uhr.role_id\n" +
+                                    "         left join role r on r.id = uhr.role_id\n" +
                                     "where uhr.user_id = ?");
                             pstm1.setObject(1,id);
                             ResultSet resultSet = pstm1.executeQuery();
@@ -216,6 +217,8 @@ public class UserServlet extends HttpServlet {
                                 response.add("data", nestedObject);
                                 response.add("message", "success");
                                 response.add("code", 200);
+
+                                System.out.println("nestedObject"+nestedObject.toString());
 
                                 writer.println(response.build());
                                 writer.close();
