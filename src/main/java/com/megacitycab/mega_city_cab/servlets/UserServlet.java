@@ -9,6 +9,7 @@ import org.apache.commons.dbcp2.BasicDataSource;
 import org.json.simple.JSONObject;
 
 import javax.json.Json;
+import javax.json.JsonArrayBuilder;
 import javax.json.JsonObjectBuilder;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -33,13 +34,127 @@ import static com.megacitycab.mega_city_cab.util.JsonPasser.jsonPasser;
 public class UserServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        resp.setContentType("text/html");
+        String action = req.getParameter("action");
+        if (action.equals("all")) {
+            getAllUsers(req, resp);
+        }else if (action.equals("by-user")){
+            getAllUsersByUserId(req, resp);
+        }
 
-        // Hello
-        PrintWriter out = resp.getWriter();
-        out.println("<html><body>");
-        out.println("<h1>vftycvf</h1>");
-        out.println("</body></html>");
+    }
+
+    private void getAllUsers(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        Jws<Claims> claims = isValidAdminJWT(req, resp);
+        JsonObjectBuilder response = Json.createObjectBuilder();
+        PrintWriter writer = resp.getWriter();
+        resp.setContentType("application/json");
+
+        if (claims != null) {
+            Object role = claims.getBody().get("role");
+            Object id = claims.getBody().get("userID");
+
+            if (id == null) {
+                response.add("message", "Unauthorized Request");
+                response.add("code", 403);
+                resp.setStatus(403);
+                writer.print(response.build());
+                writer.close();
+                return; // Exit the method if unauthorized
+            }
+
+            BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
+            Connection connection = null;
+
+            try {
+                connection = ds.getConnection();
+                PreparedStatement statement = connection.prepareStatement("SELECT u.id, u.name, u.email, r.role\n" +
+                        "FROM user u\n" +
+                        "JOIN user_has_role uhr ON u.id = uhr.user_id\n" +
+                        "JOIN role r ON uhr.role_id = r.id;\n");
+                ResultSet resultSet = statement.executeQuery();
+                JsonArrayBuilder usersArray = Json.createArrayBuilder();
+                while (resultSet.next()) {
+                    JsonObjectBuilder users = Json.createObjectBuilder();
+                    users.add("id",resultSet.getInt(1));
+                    users.add("name",resultSet.getString(2));
+                    users.add("email",resultSet.getString(3));
+                    users.add("role", resultSet.getString(4));
+                    usersArray.add(users);
+                }
+                response.add("data", usersArray);
+                response.add("message", "success");
+                response.add("code", 200);
+                writer.print(response.build());
+                writer.close();
+                connection.close();
+
+
+            }catch(Exception e){
+                e.printStackTrace(); // Log the exception for debugging
+                response.add("message", "Internal server error");
+                response.add("code", 500);
+            } finally{
+                writer.print(response.build());
+                writer.close();
+
+            }
+
+        }
+
+    }
+
+    private void getAllUsersByUserId(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        Jws<Claims> claims = isValidAdminJWT(req, resp);
+        JsonObjectBuilder response = Json.createObjectBuilder();
+        PrintWriter writer = resp.getWriter();
+        resp.setContentType("application/json");
+
+        if (claims != null) {
+            Object role = claims.getBody().get("role");
+            Object id = claims.getBody().get("userID");
+
+            if (id == null) {
+                response.add("message", "Unauthorized Request");
+                response.add("code", 403);
+                resp.setStatus(403);
+                writer.print(response.build());
+                writer.close();
+                return; // Exit the method if unauthorized
+            }
+
+            BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
+
+            try {
+                Connection connection = ds.getConnection();
+                PreparedStatement statement = connection.prepareStatement("select id,name,email from user where id=?");
+                statement.setObject(1,id);
+                ResultSet resultSet = statement.executeQuery();
+                JsonObjectBuilder user=null;
+
+                while (resultSet.next()) {
+                    user=Json.createObjectBuilder();
+                    user.add("id",resultSet.getInt(1));
+                    user.add("name",resultSet.getString(2));
+                    user.add("email",resultSet.getString(3));
+                }
+                response.add("data", user);
+                response.add("message", "success");
+                response.add("code", 200);
+                writer.print(response.build());
+                connection.close();
+
+
+            }catch(Exception e){
+                e.printStackTrace(); // Log the exception for debugging
+                response.add("message", "Internal server error");
+                response.add("code", 500);
+            } finally{
+                writer.print(response.build());
+                writer.close();
+
+            }
+
+        }
 
     }
 
