@@ -23,6 +23,7 @@ public class Security {
     public static String createJWT(String type, int userID) {
         long currentTimeMillis = System.currentTimeMillis();
         long expirationTime = currentTimeMillis + (10 * 60 * 60 * 1000); // 10 hour
+        //long expirationTime = currentTimeMillis + (1 * 60 * 1000);
 
         Key key = new SecretKeySpec(SECRET_KEY.getBytes(), SignatureAlgorithm.HS256.getJcaName());
 

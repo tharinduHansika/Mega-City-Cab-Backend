@@ -302,7 +302,7 @@ public class UserServlet extends HttpServlet {
         }
     }
 
-    private void userRegister(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    /*private void userRegister(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         JsonObjectBuilder response = Json.createObjectBuilder();
         PrintWriter writer = resp.getWriter();
         resp.setContentType("application/json");
@@ -410,9 +410,128 @@ public class UserServlet extends HttpServlet {
             try { if (pstmInsertRole != null) pstmInsertRole.close(); } catch (SQLException ignored) {}
             try { if (connection != null) connection.setAutoCommit(true); connection.close(); } catch (SQLException ignored) {}
         }
+    }*/
+
+    private void userRegister(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        JsonObjectBuilder response = Json.createObjectBuilder();
+        PrintWriter writer = resp.getWriter();
+        resp.setContentType("application/json");
+
+        JSONObject json = jsonPasser(req);
+
+        String name = (String) json.get("name");
+        String password = (String) json.get("password");
+        String email = (String) json.get("email");
+        Long roleId = (Long) json.get("roleId");
+
+        Connection connection = null;
+        PreparedStatement pstmCheck = null;
+        PreparedStatement pstmInsertUser = null;
+        PreparedStatement pstmInsertRole = null;
+        ResultSet rst = null;
+        ResultSet generatedKeys = null;
+
+        try {
+            BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
+            connection = ds.getConnection();
+            connection.setAutoCommit(false); // Start transaction
+
+            // Check if the user already exists
+            pstmCheck = connection.prepareStatement("SELECT * FROM user WHERE email=?");
+            pstmCheck.setString(1, email);
+            rst = pstmCheck.executeQuery();
+
+            if (rst.next()) {
+                response.add("message", "Username already exists");
+                response.add("code", 404);
+                writer.print(response.build());
+                writer.close();
+                return;
+            }
+
+            // Insert new user
+            pstmInsertUser = connection.prepareStatement(
+                    "INSERT INTO user (id, name, email, password) VALUES (?, ?, ?, ?)",
+                    Statement.RETURN_GENERATED_KEYS
+            );
+            pstmInsertUser.setInt(1, 0);
+            pstmInsertUser.setString(2, name);
+            pstmInsertUser.setString(3, email);
+            pstmInsertUser.setString(4, encrypt(password));
+
+            int affectedRows = pstmInsertUser.executeUpdate();
+            generatedKeys = pstmInsertUser.getGeneratedKeys();
+
+            if (affectedRows == 0 || !generatedKeys.next()) {
+                throw new SQLException("User registration failed, no ID obtained.");
+            }
+
+            int userId = generatedKeys.getInt(1);
+
+            // Check if the roleId exists
+            pstmCheck = connection.prepareStatement("SELECT id FROM role WHERE id = ?");
+            pstmCheck.setLong(1, roleId);
+            rst = pstmCheck.executeQuery();
+            if (!rst.next()) {
+                response.add("message", "Invalid role ID");
+                response.add("code", 400);
+                writer.print(response.build());
+                writer.close();
+                return;
+            }
+
+            // Insert role mapping
+            pstmInsertRole = connection.prepareStatement(
+                    "INSERT INTO user_has_role (id, role_id, user_id) VALUES (?, ?, ?)"
+            );
+            pstmInsertRole.setInt(1, 0);
+            pstmInsertRole.setLong(2, roleId);
+            pstmInsertRole.setInt(3, userId);
+            pstmInsertRole.executeUpdate();
+
+            // Commit transaction
+            connection.commit();
+
+            // Generate JWT token
+            String jwt = createJWT(roleId.toString(), userId);
+
+            // Build response with JWT token and user email
+            JsonObjectBuilder nestedObject = Json.createObjectBuilder();
+            nestedObject.add("jwt", jwt);
+            nestedObject.add("email", email);
+
+            response.add("data", nestedObject);
+            response.add("message", "Success");
+            response.add("code", 201);
+            writer.print(response.build());
+            writer.close();
+
+        } catch (Exception e) {
+            if (connection != null) {
+                try {
+                    connection.rollback(); // Rollback on failure
+                } catch (SQLException rollbackEx) {
+                    rollbackEx.printStackTrace();
+                }
+            }
+            e.printStackTrace();
+            response.add("message", "Registration failed");
+            response.add("code", 500);
+            writer.print(response.build());
+            writer.close();
+
+        } finally {
+            // Close resources
+            try { if (rst != null) rst.close(); } catch (SQLException ignored) {}
+            try { if (generatedKeys != null) generatedKeys.close(); } catch (SQLException ignored) {}
+            try { if (pstmCheck != null) pstmCheck.close(); } catch (SQLException ignored) {}
+            try { if (pstmInsertUser != null) pstmInsertUser.close(); } catch (SQLException ignored) {}
+            try { if (pstmInsertRole != null) pstmInsertRole.close(); } catch (SQLException ignored) {}
+            try { if (connection != null) connection.setAutoCommit(true); connection.close(); } catch (SQLException ignored) {}
+        }
     }
 
-    private void userLogin(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    /*private void userLogin(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         JsonObjectBuilder response = Json.createObjectBuilder();
         PrintWriter writer = resp.getWriter();
         resp.setContentType("application/json");
@@ -481,6 +600,91 @@ public class UserServlet extends HttpServlet {
             throwables.printStackTrace();
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }*/
+
+    private void userLogin(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        JsonObjectBuilder response = Json.createObjectBuilder();
+        PrintWriter writer = resp.getWriter();
+        resp.setContentType("application/json");
+
+        JSONObject json = jsonPasser(req);
+
+        String email = (String) json.get("email");
+        String userPassword = (String) json.get("password");
+
+        try {
+            BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
+            Connection connection = ds.getConnection();
+            PreparedStatement pstm = connection.prepareStatement("SELECT * FROM user WHERE email = ?");
+            pstm.setString(1, email);
+            ResultSet rst = pstm.executeQuery();
+
+            if (rst.next()) {
+                Integer id = rst.getInt(1);
+                if (id != null) {
+                    String password = rst.getString(4);
+                    try {
+                        String decrypt = decrypt(password);
+                        if (userPassword.equals(decrypt)) {
+                            // Fetch user role
+                            PreparedStatement pstm1 = connection.prepareStatement(
+                                    "SELECT r.role " +
+                                            "FROM user_has_role uhr " +
+                                            "LEFT JOIN role r ON r.id = uhr.role_id " +
+                                            "WHERE uhr.user_id = ?"
+                            );
+                            pstm1.setInt(1, id);
+                            ResultSet resultSet = pstm1.executeQuery();
+
+                            if (resultSet.next()) {
+                                // Generate JWT token
+                                String jwt = createJWT(resultSet.getString(1), id);
+
+                                // Build response with JWT token, user name, email, and role
+                                JsonObjectBuilder nestedObject = Json.createObjectBuilder();
+                                nestedObject.add("jwt", jwt);
+                                nestedObject.add("name", rst.getString("name")); // Include user's name
+                                nestedObject.add("email", email); // Include user's email
+                                nestedObject.add("role", resultSet.getString(1)); // Include user's role
+
+                                response.add("data", nestedObject);
+                                response.add("message", "success");
+                                response.add("code", 200);
+
+                                writer.println(response.build());
+                                writer.close();
+                            }
+                        } else {
+                            // Incorrect password
+                            response.add("message", "Invalid username or password");
+                            response.add("code", 404);
+                            writer.println(response.build());
+                            writer.close();
+                        }
+                    } catch (Exception e) {
+                        throw new RuntimeException("Decryption failed", e);
+                    }
+                }
+            } else {
+                // User not found
+                response.add("message", "User not found");
+                response.add("code", 404);
+                writer.println(response.build());
+                writer.close();
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            response.add("message", "Database error");
+            response.add("code", 500);
+            writer.println(response.build());
+            writer.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.add("message", "Login failed");
+            response.add("code", 500);
+            writer.println(response.build());
+            writer.close();
         }
     }
 
