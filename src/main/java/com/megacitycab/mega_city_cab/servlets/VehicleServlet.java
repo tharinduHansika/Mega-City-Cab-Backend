@@ -441,13 +441,13 @@ public class VehicleServlet extends HttpServlet {
                     connection = ds.getConnection();
 
                     // Check if the driver exists
-                    pstmCheck = connection.prepareStatement("SELECT * FROM driver WHERE driverId = ?");
+                    pstmCheck = connection.prepareStatement("SELECT * FROM vehicle WHERE vehicleId = ?");
                     pstmCheck.setInt(1, vehicleId);
                     ResultSet rst = pstmCheck.executeQuery();
 
                     if (!rst.next()) {
                         // Driver does not exist
-                        response.add("message", "Driver not found");
+                        response.add("message", "vehicle not found");
                         response.add("code", 404); // 404 Not Found
                         resp.setStatus(404);
                         writer.print(response.build());
