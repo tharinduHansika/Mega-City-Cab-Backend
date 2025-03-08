@@ -29,14 +29,19 @@ import static com.megacitycab.mega_city_cab.util.JsonPasser.jsonPasser;
 public class VehicleServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+//        resp.setHeader("Access-Control-Allow-Origin", "http://localhost:5173/*"); // Allow requests from your frontend
+//        resp.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS"); // Allowed HTTP methods
+//        resp.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization"); // Allowed headers
+//        resp.setStatus(HttpServletResponse.SC_OK); // Return 200 OK for preflight requests
+
         String action = req.getParameter("action");
         if (action.equals("all")) {
             getAllVehicles(req, resp);
-        }else if (action.equals("by-id")){
+        } else if (action.equals("by-id")) {
             getAllVehiclesbyVehicleId(req, resp);
-        }else if (action.equals("by-category")){
+        } else if (action.equals("by-category")) {
             getAllVehicleTypes(req, resp);
-        }else if (action.equals("by-availability")){
+        } else if (action.equals("by-availability")) {
             getAvailableVehiclesByType(req, resp);
         }
     }
