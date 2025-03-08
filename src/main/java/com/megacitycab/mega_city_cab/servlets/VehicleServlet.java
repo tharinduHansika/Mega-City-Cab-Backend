@@ -415,8 +415,27 @@ public class VehicleServlet extends HttpServlet {
                 // Assuming driverID is provided in the JSON
                 String vehicleNumber = (String) json.get("vehicleNumber");
                 String vehicleType = (String) json.get("vehicleType");
-                int passengerCount = Integer.parseInt((String) json.get("passengerCount"));
-                Double pricePerKm = Double.parseDouble((String) json.get("pricePerKm"));
+//                int passengerCount = Integer.parseInt((String) json.get("passengerCount"));
+//                Double pricePerKm = Double.parseDouble((String) json.get("pricePerKm"));
+
+                Object passengerCountObj = json.get("passengerCount");
+                int passengerCount;
+                if (passengerCountObj instanceof Number) {
+                    passengerCount = ((Number) passengerCountObj).intValue();
+                } else {
+                    passengerCount = Integer.parseInt(passengerCountObj.toString());
+                }
+
+                Object pricePerKmObj = json.get("pricePerKm");
+                double pricePerKm;
+                if (pricePerKmObj instanceof Number) {
+                    pricePerKm = ((Number) pricePerKmObj).doubleValue();
+                } else {
+                    pricePerKm = Double.parseDouble(pricePerKmObj.toString());
+                }
+
+
+
                 String vehicleBrand = (String) json.get("vehicleBrand");
                 String status = (String) json.get("status");
                 String vehicleModel = (String) json.get("vehicleModel");
