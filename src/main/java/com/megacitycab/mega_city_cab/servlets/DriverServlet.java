@@ -336,7 +336,16 @@ public class DriverServlet extends HttpServlet {
                 int driverId = Integer.parseInt(json.get("driverId").toString());
                 // Assuming driverID is provided in the JSON
                 String name = (String) json.get("name");
-                int age = Integer.parseInt((String) json.get("age"));
+//                int age = Integer.parseInt((String) json.get("age"));
+
+                Object ageObj = json.get("age");
+                int age;
+                if (ageObj instanceof Number) {
+                    age = ((Number) ageObj).intValue();
+                } else {
+                    age = Integer.parseInt(ageObj.toString());
+                }
+
                 String email = (String) json.get("email");
                 String licenseNumber = (String) json.get("licenseNumber");
                 String nicNumber = (String) json.get("nicNumber");

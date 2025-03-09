@@ -47,7 +47,6 @@ public class VehicleServlet extends HttpServlet {
     }
 
     private void getAvailableVehiclesByType(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        Jws<Claims> claims = isValidAdminJWT(req, resp);
         JsonObjectBuilder response = Json.createObjectBuilder();
         PrintWriter writer = resp.getWriter();
         resp.setContentType("application/json");
@@ -56,12 +55,12 @@ public class VehicleServlet extends HttpServlet {
 
         try {
             JSONObject json = jsonPasser(req);
-            int vehicleType = Integer.parseInt(json.get("vehicleType").toString());
+            String vehicleType = json.get("vehicleType").toString(); // Get vehicleType as a string
 
             try (Connection connection = ds.getConnection();
                  PreparedStatement statement = connection.prepareStatement("SELECT * FROM vehicle WHERE vehicleType = ? AND status = 'available'")) {
 
-                statement.setInt(1, vehicleType);
+                statement.setString(1, vehicleType); // Use setString
                 ResultSet resultSet = statement.executeQuery();
 
                 JsonArrayBuilder availableVehiclesArray = Json.createArrayBuilder();
@@ -70,7 +69,7 @@ public class VehicleServlet extends HttpServlet {
                     JsonObjectBuilder vehicle = Json.createObjectBuilder();
                     vehicle.add("vehicleId", resultSet.getInt("vehicleId"));
                     vehicle.add("VehicleNumber", resultSet.getString("VehicleNumber"));
-                    vehicle.add("vehicleType", resultSet.getInt("vehicleType"));
+                    vehicle.add("vehicleType", resultSet.getString("vehicleType")); // Use getString
                     vehicle.add("passengerCount", resultSet.getString("passengerCount"));
                     vehicle.add("pricePerKm", resultSet.getString("pricePerKm"));
                     vehicle.add("vehicleBrand", resultSet.getString("vehicleBrand"));
@@ -97,7 +96,7 @@ public class VehicleServlet extends HttpServlet {
 
 
     private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        Jws<Claims> claims = isValidAdminJWT(req, resp);
+//        Jws<Claims> claims = isValidAdminJWT(req, resp);
         JsonObjectBuilder response = Json.createObjectBuilder();
         PrintWriter writer = resp.getWriter();
         resp.setContentType("application/json");
@@ -111,7 +110,9 @@ public class VehicleServlet extends HttpServlet {
             JsonArrayBuilder vehicleTypesArray = Json.createArrayBuilder();
 
             while (resultSet.next()) {
-                vehicleTypesArray.add(resultSet.getInt("vehicleType"));
+//                vehicleTypesArray.add(resultSet.getInt("vehicleType"));
+                String vehicleType = resultSet.getString("vehicleType");
+                vehicleTypesArray.add(vehicleType);
             }
 
             response.add("data", vehicleTypesArray);
