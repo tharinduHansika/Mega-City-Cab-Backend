@@ -54,8 +54,24 @@ public class VehicleServlet extends HttpServlet {
         BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
 
         try {
-            JSONObject json = jsonPasser(req);
-            String vehicleType = json.get("vehicleType").toString(); // Get vehicleType as a string
+//            JSONObject json = jsonPasser(req);
+//            System.out.println(json.get("vehicleType").toString());
+//            String vehicleType = json.get("vehicleType").toString(); // Get vehicleType as a string
+
+            // Retrieve the vehicleType query parameter
+            String vehicleType = req.getParameter("vehicleType");
+
+            // Log the vehicleType for debugging
+            System.out.println("Received vehicleType from frontend: " + vehicleType);
+
+            // Validate the vehicleType
+            if (vehicleType == null || vehicleType.isEmpty()) {
+                response.add("message", "vehicleType parameter is missing or empty");
+                response.add("code", 400); // Bad request
+                writer.print(response.build());
+                writer.close();
+                return;
+            }
 
             try (Connection connection = ds.getConnection();
                  PreparedStatement statement = connection.prepareStatement("SELECT * FROM vehicle WHERE vehicleType = ? AND status = 'available'")) {
