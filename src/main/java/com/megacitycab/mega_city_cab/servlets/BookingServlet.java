@@ -63,15 +63,60 @@ public class BookingServlet extends HttpServlet {
                 System.out.println("Received JSON: " + json.toString());
 
 
-                Double amount = Double.parseDouble ((String) json.get("amount"));
+                Object amountObj = json.get("amount");
+                double amount;
+                if (amountObj instanceof Number) {
+                    amount = ((Number) amountObj).doubleValue();
+                } else {
+                    amount = Double.parseDouble(amountObj.toString());
+                }
+                //Double amount = Double.parseDouble ((String) json.get("amount"));
                 String bookingDate = (String) json.get("bookingDate");
                 String bookingTime = (String) json.get("bookingTime");
                 String dropLocation = (String) json.get("dropLocation");
                 String pickupLocation = (String) json.get("pickupLocation");
-                Double totalKm = Double.parseDouble ((String) json.get("totalKm"));
-                int customerId = Integer.parseInt ((String) json.get("customerId"));
-                int driverId = Integer.parseInt ((String) json.get("driverId"));
-                int vehicleId = Integer.parseInt ((String) json.get("vehicleId"));
+
+                Object totalKmtObj = json.get("totalKm");
+                double totalKm;
+                if (totalKmtObj instanceof Number) {
+                    totalKm = ((Number) totalKmtObj).doubleValue();
+                } else {
+                    totalKm = Double.parseDouble(totalKmtObj.toString());
+                }
+
+                //Double totalKm = Double.parseDouble ((String) json.get("totalKm"));
+
+                Object customerIdObj = json.get("customerId");
+                int customerId;
+                if (customerIdObj instanceof Number) {
+                    customerId = ((Number) customerIdObj).intValue();
+                } else {
+                    customerId = Integer.parseInt(customerIdObj.toString());
+                }
+
+                //int customerId = Integer.parseInt ((String) json.get("customerId"));
+
+                Object driverIdObj = json.get("driverId");
+                int driverId;
+                if (driverIdObj instanceof Number) {
+                    driverId = ((Number) driverIdObj).intValue();
+                } else {
+                    driverId = Integer.parseInt(driverIdObj.toString());
+                }
+
+                //int driverId = Integer.parseInt ((String) json.get("driverId"));
+
+                Object vehicleIdObj = json.get("vehicleId");
+                int vehicleId;
+                if (vehicleIdObj instanceof Number) {
+                    vehicleId = ((Number) vehicleIdObj).intValue();
+                } else {
+                    vehicleId = Integer.parseInt(vehicleIdObj.toString());
+                }
+
+                //int vehicleId = Integer.parseInt ((String) json.get("vehicleId"));
+
+
                 String status = (String) json.get("status");
 
                 // Debugging: Print the status value
