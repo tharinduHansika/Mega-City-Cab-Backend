@@ -21,8 +21,8 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.*;
+import java.util.*;
 import java.util.Date;
-import java.util.Objects;
 
 import static com.megacitycab.mega_city_cab.config.Security.*;
 import static com.megacitycab.mega_city_cab.util.AESEncryption.decrypt;
@@ -34,180 +34,203 @@ public class BookingServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        //addBooking(req, resp);
-
         Jws<Claims> claims = isValidUserJWT(req, resp);
         JsonObjectBuilder response = Json.createObjectBuilder();
         PrintWriter writer = resp.getWriter();
         resp.setContentType("application/json");
 
-        if (claims != null) {
-            Object role = claims.getBody().get("role");
-            Object id = claims.getBody().get("userID");
-
-            if (id == null) {
-                response.add("message", "Unauthorized Request");
-                response.add("code", 403);
-                resp.setStatus(403);
-                writer.print(response.build());
-                writer.close();
-                return; // Exit the method if unauthorized
-            }
-
-            BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
-
-            try {
-                JSONObject json = jsonPasser(req);
-
-                // Debugging: Print the entire JSON payload
-                System.out.println("Received JSON: " + json.toString());
-
-
-                Object amountObj = json.get("amount");
-                double amount;
-                if (amountObj instanceof Number) {
-                    amount = ((Number) amountObj).doubleValue();
-                } else {
-                    amount = Double.parseDouble(amountObj.toString());
-                }
-                //Double amount = Double.parseDouble ((String) json.get("amount"));
-                String bookingDate = (String) json.get("bookingDate");
-                String bookingTime = (String) json.get("bookingTime");
-                String dropLocation = (String) json.get("dropLocation");
-                String pickupLocation = (String) json.get("pickupLocation");
-
-                Object totalKmtObj = json.get("totalKm");
-                double totalKm;
-                if (totalKmtObj instanceof Number) {
-                    totalKm = ((Number) totalKmtObj).doubleValue();
-                } else {
-                    totalKm = Double.parseDouble(totalKmtObj.toString());
-                }
-
-                //Double totalKm = Double.parseDouble ((String) json.get("totalKm"));
-
-                Object customerIdObj = json.get("customerId");
-                int customerId;
-                if (customerIdObj instanceof Number) {
-                    customerId = ((Number) customerIdObj).intValue();
-                } else {
-                    customerId = Integer.parseInt(customerIdObj.toString());
-                }
-
-                //int customerId = Integer.parseInt ((String) json.get("customerId"));
-
-                Object driverIdObj = json.get("driverId");
-                int driverId;
-                if (driverIdObj instanceof Number) {
-                    driverId = ((Number) driverIdObj).intValue();
-                } else {
-                    driverId = Integer.parseInt(driverIdObj.toString());
-                }
-
-                //int driverId = Integer.parseInt ((String) json.get("driverId"));
-
-                Object vehicleIdObj = json.get("vehicleId");
-                int vehicleId;
-                if (vehicleIdObj instanceof Number) {
-                    vehicleId = ((Number) vehicleIdObj).intValue();
-                } else {
-                    vehicleId = Integer.parseInt(vehicleIdObj.toString());
-                }
-
-                //int vehicleId = Integer.parseInt ((String) json.get("vehicleId"));
-
-
-                String status = (String) json.get("status");
-
-                // Debugging: Print the status value
-                System.out.println("Status: " + status);
-
-                if (status == null) {
-                    response.add("message", "Status field is missing or incorrect");
-                    response.add("code", 400);
-                    resp.setStatus(400);
-                    writer.print(response.build());
-                    writer.close();
-                    return;
-                }
-
-                Connection connection = null;
-                PreparedStatement pstmCheck = null;
-                PreparedStatement pstmInsertUser = null;
-                ResultSet generatedKeys = null;
-
-                HttpSession session = req.getSession();
-
-
-                try {
-                    connection = ds.getConnection();
-
-                    PreparedStatement pstm = connection.prepareStatement(
-                            "INSERT INTO booking (bookingId, amount, bookingDate, bookingTime, dropLocation, pickupLocation, totalKm, customerId, driverId, vehicleId, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                            Statement.RETURN_GENERATED_KEYS
-                    );
-                    pstm.setInt(1, 0);
-                    pstm.setDouble(2, amount);
-                    pstm.setString(3, bookingDate);
-                    pstm.setString(4, bookingTime);
-                    pstm.setString(5, dropLocation);
-                    pstm.setString(6, pickupLocation);
-                    pstm.setDouble(7, totalKm);
-                    pstm.setInt(8, customerId);
-                    pstm.setInt(9, driverId);
-                    pstm.setInt(10, vehicleId);
-                    pstm.setString(11, status);
-
-
-                    int i = pstm.executeUpdate();
-
-                    if (i > 0) {
-                        // Successfully inserted
-                        response.add("message", "Booking added successfully");
-                        response.add("code", 201);
-                        resp.setStatus(201);
-                    } else {
-                        // Insert failed
-                        response.add("message", "Failed to add booking");
-                        response.add("code", 500);
-                        resp.setStatus(500);
-                    }
-
-                } catch (SQLException throwables) {
-                    throwables.printStackTrace();
-                    response.add("message", "Database error");
-                    response.add("code", 500);
-                    resp.setStatus(500);
-                } finally {
-                    if (connection != null) {
-                        try {
-                            connection.close();
-                        } catch (SQLException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-
-            } catch (Exception e) {
-                e.printStackTrace(); // Log the exception for debugging
-                response.add("message", "Internal server error");
-                response.add("code", 500);
-                resp.setStatus(500);
-            } finally {
-                writer.print(response.build());
-                writer.close();
-            }
-
-        } else {
-            // Invalid JWT
+        if (claims == null) {
             response.add("message", "Invalid JWT");
             response.add("code", 401);
             resp.setStatus(401);
             writer.print(response.build());
             writer.close();
+            return;
+        }
+
+        Object role = claims.getBody().get("role");
+        Object id = claims.getBody().get("userID");
+
+        if (id == null) {
+            response.add("message", "Unauthorized Request");
+            response.add("code", 403);
+            resp.setStatus(403);
+            writer.print(response.build());
+            writer.close();
+            return;
+        }
+
+        BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
+
+        try {
+            JSONObject json = jsonPasser(req);
+            System.out.println("Received JSON: " + json.toString());
+
+            Object amountObj = json.get("amount");
+            double amount = (amountObj instanceof Number) ?
+                    ((Number) amountObj).doubleValue() :
+                    Double.parseDouble(amountObj.toString());
+
+            String bookingDate = (String) json.get("bookingDate");
+            String bookingTime = (String) json.get("bookingTime");
+            String dropLocation = (String) json.get("dropLocation");
+            String pickupLocation = (String) json.get("pickupLocation");
+
+            Object totalKmtObj = json.get("totalKm");
+            double totalKm = (totalKmtObj instanceof Number) ?
+                    ((Number) totalKmtObj).doubleValue() :
+                    Double.parseDouble(totalKmtObj.toString());
+
+            Object customerIdObj = json.get("customerId");
+            int customerId = (customerIdObj instanceof Number) ?
+                    ((Number) customerIdObj).intValue() :
+                    Integer.parseInt(customerIdObj.toString());
+
+            Object driverIdObj = json.get("driverId");
+            int driverId = (driverIdObj instanceof Number) ?
+                    ((Number) driverIdObj).intValue() :
+                    Integer.parseInt(driverIdObj.toString());
+
+            Object vehicleIdObj = json.get("vehicleId");
+            int vehicleId = (vehicleIdObj instanceof Number) ?
+                    ((Number) vehicleIdObj).intValue() :
+                    Integer.parseInt(vehicleIdObj.toString());
+
+            String status = (String) json.get("status");
+            System.out.println("Status: " + status);
+
+            if (status == null) {
+                response.add("message", "Status field is missing or incorrect");
+                response.add("code", 400);
+                resp.setStatus(400);
+                writer.print(response.build());
+                writer.close();
+                return;
+            }
+
+            Connection connection = null;
+            try {
+                connection = ds.getConnection();
+                connection.setAutoCommit(false);  // Start transaction
+
+                // Validate driver availability
+                int assignedDriverId = getValidDriverId(connection, driverId);
+                if (assignedDriverId == -1) {
+                    response.add("message", "No available drivers");
+                    response.add("code", 400);
+                    resp.setStatus(400);
+                    writer.print(response.build());
+                    writer.close();
+                    connection.rollback();
+                    return;
+                }
+
+                PreparedStatement pstm = connection.prepareStatement(
+                        "INSERT INTO booking (bookingId, amount, bookingDate, bookingTime, dropLocation, pickupLocation, totalKm, customerId, driverId, vehicleId, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        Statement.RETURN_GENERATED_KEYS
+                );
+                pstm.setInt(1, 0);
+                pstm.setDouble(2, amount);
+                pstm.setString(3, bookingDate);
+                pstm.setString(4, bookingTime);
+                pstm.setString(5, dropLocation);
+                pstm.setString(6, pickupLocation);
+                pstm.setDouble(7, totalKm);
+                pstm.setInt(8, customerId);
+                pstm.setInt(9, assignedDriverId);
+                pstm.setInt(10, vehicleId);
+                pstm.setString(11, status);
+
+                int i = pstm.executeUpdate();
+
+                if (i > 0) {
+                    // Update driver status
+                    String updateQuery = "UPDATE driver SET status = 'busy' WHERE driverId = ?";
+                    PreparedStatement updatePstm = connection.prepareStatement(updateQuery);
+                    updatePstm.setInt(1, assignedDriverId);
+                    updatePstm.executeUpdate();
+
+                    connection.commit();
+
+                    response.add("message", "Booking added successfully");
+                    response.add("code", 201);
+                    response.add("driverId", assignedDriverId);
+                    resp.setStatus(201);
+                } else {
+                    connection.rollback();
+                    response.add("message", "Failed to add booking");
+                    response.add("code", 500);
+                    resp.setStatus(500);
+                }
+
+            } catch (SQLException throwables) {
+                if (connection != null) {
+                    try {
+                        connection.rollback();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+                throwables.printStackTrace();
+                response.add("message", "Database error: " + throwables.getMessage());
+                response.add("code", 500);
+                resp.setStatus(500);
+            } finally {
+                if (connection != null) {
+                    try {
+                        connection.setAutoCommit(true);
+                        connection.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.add("message", "Internal server error: " + e.getMessage());
+            response.add("code", 500);
+            resp.setStatus(500);
+        } finally {
+            writer.print(response.build());
+            writer.close();
         }
     }
 
+    private int getValidDriverId(Connection connection, int requestedDriverId) throws SQLException {
+        String query = "SELECT driverId FROM driver WHERE driverId = ? AND status = 'available'";
+
+        try (PreparedStatement pstm = connection.prepareStatement(query)) {
+            pstm.setInt(1, requestedDriverId);
+            try (ResultSet rs = pstm.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("driverId");  // Return requested driver if available
+                }
+            }
+        }
+
+        // If requested driver not available, get any available driver
+        return returnAvailable(connection);
+    }
+
+    private int returnAvailable(Connection connection) throws SQLException {
+        List<Integer> availableDriverIds = new ArrayList<>();
+        String query = "SELECT driverId FROM driver WHERE status = 'available'";
+
+        try (PreparedStatement pstm = connection.prepareStatement(query);
+             ResultSet rs = pstm.executeQuery()) {
+            while (rs.next()) {
+                availableDriverIds.add(rs.getInt("driverId"));
+            }
+        }
+
+        if (availableDriverIds.isEmpty()) {
+            return -1; // No available drivers
+        }
+
+        Random random = new Random();
+        return availableDriverIds.get(random.nextInt(availableDriverIds.size()));
+    }
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         Jws<Claims> claims = isValidUserJWT(req, resp);
