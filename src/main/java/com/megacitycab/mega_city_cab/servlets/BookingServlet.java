@@ -81,10 +81,12 @@ public class BookingServlet extends HttpServlet {
                     ((Number) totalKmtObj).doubleValue() :
                     Double.parseDouble(totalKmtObj.toString());
 
-            Object customerIdObj = json.get("customerId");
-            int customerId = (customerIdObj instanceof Number) ?
-                    ((Number) customerIdObj).intValue() :
-                    Integer.parseInt(customerIdObj.toString());
+//            Object customerIdObj = json.get("customerId");
+//            int customerId = (customerIdObj instanceof Number) ?
+//                    ((Number) customerIdObj).intValue() :
+//                    Integer.parseInt(customerIdObj.toString());
+
+            String userEmail = (String) json.get("userEmail");
 
             Object driverIdObj = json.get("driverId");
             int driverId = (driverIdObj instanceof Number) ?
@@ -126,7 +128,7 @@ public class BookingServlet extends HttpServlet {
                 }
 
                 PreparedStatement pstm = connection.prepareStatement(
-                        "INSERT INTO booking (bookingId, amount, bookingDate, bookingTime, dropLocation, pickupLocation, totalKm, customerId, driverId, vehicleId, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        "INSERT INTO booking (bookingId, amount, bookingDate, bookingTime, dropLocation, pickupLocation, totalKm, userEmail, driverId, vehicleId, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         Statement.RETURN_GENERATED_KEYS
                 );
                 pstm.setInt(1, 0);
@@ -136,7 +138,7 @@ public class BookingServlet extends HttpServlet {
                 pstm.setString(5, dropLocation);
                 pstm.setString(6, pickupLocation);
                 pstm.setDouble(7, totalKm);
-                pstm.setInt(8, customerId);
+                pstm.setString(8, userEmail);
                 pstm.setInt(9, assignedDriverId);
                 pstm.setInt(10, vehicleId);
                 pstm.setString(11, status);
