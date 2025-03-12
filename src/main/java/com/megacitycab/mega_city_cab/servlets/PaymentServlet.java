@@ -138,13 +138,7 @@ public class PaymentServlet extends HttpServlet {
                     bookingId = Integer.parseInt(bookingIdObj.toString());
                 }
 
-                Object customerIdObj = json.get("customerId");
-                int customerId;
-                if (customerIdObj instanceof Number) {
-                    customerId = ((Number) customerIdObj).intValue();
-                } else {
-                    customerId = Integer.parseInt(customerIdObj.toString());
-                }
+                String userEmail = (String) json.get("userEmail");
 
                 Object vehicleIdObj = json.get("vehicleId");
                 int vehicleId;
@@ -185,11 +179,11 @@ public class PaymentServlet extends HttpServlet {
                     connection = ds.getConnection();
 
                     pstm = connection.prepareStatement(
-                            "INSERT INTO payment (bookingId, customerId, vehicleId, amount, paymentDate, paymentTime, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                            "INSERT INTO payment (bookingId, userEmail, vehicleId, amount, paymentDate, paymentTime, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
                             Statement.RETURN_GENERATED_KEYS
                     );
                     pstm.setInt(1, bookingId);
-                    pstm.setInt(2, customerId);
+                    pstm.setString(2, userEmail);
                     pstm.setInt(3, vehicleId);
                     pstm.setDouble(4, amount);
                     pstm.setString(5, paymentDate);

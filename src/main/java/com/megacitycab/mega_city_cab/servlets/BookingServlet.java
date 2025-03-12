@@ -146,6 +146,13 @@ public class BookingServlet extends HttpServlet {
                 int i = pstm.executeUpdate();
 
                 if (i > 0) {
+                    // Retrieve the generated booking ID
+                    ResultSet generatedKeys = pstm.getGeneratedKeys();
+                    int bookingId = -1;
+                    if (generatedKeys.next()) {
+                        bookingId = generatedKeys.getInt(1);
+                    }
+
                     // Update driver status
                     String updateQuery = "UPDATE driver SET status = 'busy' WHERE driverId = ?";
                     PreparedStatement updatePstm = connection.prepareStatement(updateQuery);
@@ -155,8 +162,17 @@ public class BookingServlet extends HttpServlet {
                     connection.commit();
 
                     response.add("message", "Booking added successfully");
-                    response.add("code", 201);
+                    response.add("bookingId", bookingId);
+                    response.add("amount", amount);
+                    response.add("bookingDate", bookingDate);
+                    response.add("bookingTime", bookingTime);
+                    response.add("dropLocation", dropLocation);
+                    response.add("pickupLocation", pickupLocation);
+                    response.add("totalKm", totalKm);
+                    response.add("userEmail", userEmail);
                     response.add("driverId", assignedDriverId);
+                    response.add("vehicleId", vehicleId);
+                    response.add("status", status);
                     resp.setStatus(201);
                 } else {
                     connection.rollback();
