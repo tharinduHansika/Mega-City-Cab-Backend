@@ -107,7 +107,7 @@ public class VehicleServlet extends HttpServlet {
     }
 
 
-    private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+/*    private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 //        Jws<Claims> claims = isValidAdminJWT(req, resp);
         JsonObjectBuilder response = Json.createObjectBuilder();
         PrintWriter writer = resp.getWriter();
@@ -139,8 +139,44 @@ public class VehicleServlet extends HttpServlet {
             writer.print(response.build());
             writer.close();
         }
-    }
+    }*/
+private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    JsonObjectBuilder response = Json.createObjectBuilder();
+    PrintWriter writer = resp.getWriter();
+    resp.setContentType("application/json");
 
+    BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
+
+    try (Connection connection = ds.getConnection();
+         PreparedStatement statement = connection.prepareStatement("SELECT DISTINCT vehicleType, pricePerKm FROM vehicle");
+         ResultSet resultSet = statement.executeQuery()) {
+
+        JsonArrayBuilder vehicleTypesArray = Json.createArrayBuilder();
+
+        while (resultSet.next()) {
+            JsonObjectBuilder vehicleTypeObject = Json.createObjectBuilder();
+            String vehicleType = resultSet.getString("vehicleType");
+            double pricePerKm = resultSet.getDouble("pricePerKm");
+
+            vehicleTypeObject.add("vehicleType", vehicleType);
+            vehicleTypeObject.add("pricePerKm", pricePerKm);
+
+            vehicleTypesArray.add(vehicleTypeObject);
+        }
+
+        response.add("data", vehicleTypesArray);
+        response.add("message", "success");
+        response.add("code", 200);
+
+    } catch (Exception e) {
+        e.printStackTrace(); // Log the exception for debugging
+        response.add("message", "Internal server error");
+        response.add("code", 500);
+    } finally {
+        writer.print(response.build());
+        writer.close();
+    }
+}
 
     private void getAllVehiclesbyVehicleId(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException{
         Jws<Claims> claims = isValidAdminJWT(req, resp);

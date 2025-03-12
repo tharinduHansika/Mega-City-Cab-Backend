@@ -42,65 +42,6 @@ public class BookingServlet extends HttpServlet {
         }
     }
 
-/*    private void getAllBookings(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        Jws<Claims> claims = isValidAdminJWT(req, resp);
-        JsonObjectBuilder response = Json.createObjectBuilder();
-        PrintWriter writer = resp.getWriter();
-        resp.setContentType("application/json");
-
-        if (claims != null) {
-            Object role = claims.getBody().get("role");
-            Object id = claims.getBody().get("userID");
-
-            if (id == null) {
-                response.add("message", "Unauthorized Request");
-                response.add("code", 403);
-                resp.setStatus(403);
-                writer.print(response.build());
-                writer.close();
-                return; // Exit the method if unauthorized
-            }
-
-            BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
-            Connection connection = null;
-
-            try {
-                connection = ds.getConnection();
-                PreparedStatement statement = connection.prepareStatement("SELECT * FROM booking");
-                ResultSet resultSet = statement.executeQuery();
-                JsonArrayBuilder bookingsArray = Json.createArrayBuilder();
-                while (resultSet.next()) {
-                    JsonObjectBuilder booking = Json.createObjectBuilder();
-                    booking.add("bookingId", resultSet.getInt("bookingId"));
-                    booking.add("amount", resultSet.getDouble("amount"));
-                    booking.add("bookingDate", resultSet.getString("bookingDate"));
-                    booking.add("bookingTime", resultSet.getString("bookingTime"));
-                    booking.add("dropLocation", resultSet.getString("dropLocation"));
-                    booking.add("pickupLocation", resultSet.getString("pickupLocation"));
-                    booking.add("totalKm", resultSet.getDouble("totalKm"));
-                    booking.add("customerId", resultSet.getInt("customerId"));
-                    booking.add("driverId", resultSet.getInt("driverId"));
-                    booking.add("vehicleId", resultSet.getInt("vehicleId"));
-                    booking.add("status", resultSet.getString("status"));
-
-                    bookingsArray.add(booking);
-                }
-                response.add("data", bookingsArray);
-                response.add("message", "success");
-                response.add("code", 200);
-                writer.print(response.build());
-                writer.close();
-                connection.close();
-            } catch (Exception e) {
-                e.printStackTrace(); // Log the exception for debugging
-                response.add("message", "Internal server error");
-                response.add("code", 500);
-            } finally {
-                writer.print(response.build());
-                writer.close();
-            }
-        }
-    }*/
 private void getAllBookings(HttpServletRequest req, HttpServletResponse resp) throws IOException {
     Jws<Claims> claims = isValidAdminJWT(req, resp);
     JsonObjectBuilder response = Json.createObjectBuilder();
@@ -158,8 +99,8 @@ private void getAllBookings(HttpServletRequest req, HttpServletResponse resp) th
         writer.close();
     }
 }
-    private void getBookingById(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        Jws<Claims> claims = isValidAdminJWT(req, resp);
+   /* private void getBookingById(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        Jws<Claims> claims = isValidUserJWT(req, resp);
         JsonObjectBuilder response = Json.createObjectBuilder();
         PrintWriter writer = resp.getWriter();
         resp.setContentType("application/json");
@@ -174,7 +115,7 @@ private void getAllBookings(HttpServletRequest req, HttpServletResponse resp) th
                 resp.setStatus(403);
                 writer.print(response.build());
                 writer.close();
-                return; // Exit the method if unauthorized
+                return;
             }
 
             BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
@@ -198,7 +139,7 @@ private void getAllBookings(HttpServletRequest req, HttpServletResponse resp) th
                     booking.add("dropLocation", resultSet.getString("dropLocation"));
                     booking.add("pickupLocation", resultSet.getString("pickupLocation"));
                     booking.add("totalKm", resultSet.getDouble("totalKm"));
-                    booking.add("customerId", resultSet.getInt("customerId"));
+                    booking.add("userEmail", resultSet.getString("userEmail"));
                     booking.add("driverId", resultSet.getInt("driverId"));
                     booking.add("vehicleId", resultSet.getInt("vehicleId"));
                     booking.add("status", resultSet.getString("status"));
@@ -212,15 +153,92 @@ private void getAllBookings(HttpServletRequest req, HttpServletResponse resp) th
                 writer.close();
                 connection.close();
             } catch (Exception e) {
-                e.printStackTrace(); // Log the exception for debugging
-                response.add("message", "Internal server error");
+                e.printStackTrace();
+                response.add("message", "Internal server error: " + e.getMessage());
                 response.add("code", 500);
-            } finally {
                 writer.print(response.build());
                 writer.close();
+            } finally {
+                if (connection != null) {
+                    try {
+                        connection.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
         }
-    }
+    }*/
+   private void getBookingById(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+       Jws<Claims> claims = isValidUserJWT(req, resp);
+       JsonObjectBuilder response = Json.createObjectBuilder();
+       PrintWriter writer = resp.getWriter();
+       resp.setContentType("application/json");
+
+       if (claims != null) {
+           Object role = claims.getBody().get("role");
+           Object id = claims.getBody().get("userID");
+
+           if (id == null) {
+               response.add("message", "Unauthorized Request");
+               response.add("code", 403);
+               resp.setStatus(403);
+               writer.print(response.build());
+               writer.close();
+               return;
+           }
+
+           BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
+           Connection connection = null;
+
+           try {
+               // Read bookingId from query parameters
+               int bookingId = Integer.parseInt(req.getParameter("bookingId"));
+
+               connection = ds.getConnection();
+               PreparedStatement statement = connection.prepareStatement("SELECT * FROM booking WHERE bookingId = ?");
+               statement.setInt(1, bookingId);
+               ResultSet resultSet = statement.executeQuery();
+               JsonArrayBuilder bookingsArray = Json.createArrayBuilder();
+               while (resultSet.next()) {
+                   JsonObjectBuilder booking = Json.createObjectBuilder();
+                   booking.add("bookingId", resultSet.getInt("bookingId"));
+                   booking.add("amount", resultSet.getDouble("amount"));
+                   booking.add("bookingDate", resultSet.getString("bookingDate"));
+                   booking.add("bookingTime", resultSet.getString("bookingTime"));
+                   booking.add("dropLocation", resultSet.getString("dropLocation"));
+                   booking.add("pickupLocation", resultSet.getString("pickupLocation"));
+                   booking.add("totalKm", resultSet.getDouble("totalKm"));
+                   booking.add("userEmail", resultSet.getString("userEmail"));
+                   booking.add("driverId", resultSet.getInt("driverId"));
+                   booking.add("vehicleId", resultSet.getInt("vehicleId"));
+                   booking.add("status", resultSet.getString("status"));
+
+                   bookingsArray.add(booking);
+               }
+               response.add("data", bookingsArray);
+               response.add("message", "success");
+               response.add("code", 200);
+               writer.print(response.build());
+               writer.close();
+               connection.close();
+           } catch (Exception e) {
+               e.printStackTrace();
+               response.add("message", "Internal server error: " + e.getMessage());
+               response.add("code", 500);
+               writer.print(response.build());
+               writer.close();
+           } finally {
+               if (connection != null) {
+                   try {
+                       connection.close();
+                   } catch (SQLException e) {
+                       e.printStackTrace();
+                   }
+               }
+           }
+       }
+   }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
