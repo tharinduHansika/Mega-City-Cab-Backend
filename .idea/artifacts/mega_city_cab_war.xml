@@ -1,14 +1,14 @@
 <component name="ArtifactManager">
   <artifact type="war" name="mega_city_cab:war">
-    <output-path>$PROJECT_DIR$/out/artifacts/mega_city_cab_war</output-path>
-    <root id="archive" name="mega_city_cab_war.war">
+    <output-path>$PROJECT_DIR$/target</output-path>
+    <properties id="maven-jee-properties">
+      <options>
+        <module>mega_city_cab</module>
+        <packaging>war</packaging>
+      </options>
+    </properties>
+    <root id="archive" name="mega_city_cab-1.0-SNAPSHOT.war">
       <element id="artifact" artifact-name="mega_city_cab:war exploded" />
-      <element id="javaee-facet-resources" facet="mega_city_cab/web/Web" />
-      <element id="directory" name="WEB-INF">
-        <element id="directory" name="classes">
-          <element id="module-output" name="mega_city_cab" />
-        </element>
-      </element>
     </root>
   </artifact>
 </component>
