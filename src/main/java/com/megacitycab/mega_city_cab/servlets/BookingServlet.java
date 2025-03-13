@@ -451,6 +451,7 @@ private void getAllBookings(HttpServletRequest req, HttpServletResponse resp) th
         // If requested driver not available, get any available driver
         return returnAvailable(connection);
     }
+
     private int getValidVehicleId(Connection connection, int requestedVehicleId) throws SQLException {
         String query = "SELECT vehicleId FROM vehicle WHERE vehicleId = ? AND status = 'available'";
 
