@@ -25,187 +25,53 @@ import java.util.Objects;
 import static com.megacitycab.mega_city_cab.config.Security.isValidAdminJWT;
 import static com.megacitycab.mega_city_cab.util.JsonPasser.jsonPasser;
 
-@WebServlet(name = "vehicleServlet", value = "/vehicle")
-public class VehicleServlet extends HttpServlet {
+@WebServlet(name = "driverServlet", value = "/driver")
+public class DriverServlet extends HttpServlet {
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        //getAllDrivers(req, resp);
+        //getAllDriversbyDriverId(req, resp);
 
         String action = req.getParameter("action");
         if (action.equals("all")) {
-            getAllVehicles(req, resp);
-        } else if (action.equals("by-id")) {
+            getAllDrivers(req, resp);
+        }else if (action.equals("by-user")){
             getAllVehiclesbyVehicleId(req, resp);
-        } else if (action.equals("by-category")) {
-            getAllVehicleTypes(req, resp);
-        } else if (action.equals("by-availability")) {
-            getAvailableVehiclesByType(req, resp);
         }
     }
 
-    private void getAvailableVehiclesByType(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        JsonObjectBuilder response = Json.createObjectBuilder();
-        PrintWriter writer = resp.getWriter();
-        resp.setContentType("application/json");
-
-        BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
-
-        try {
-//            JSONObject json = jsonPasser(req);
-//            System.out.println(json.get("vehicleType").toString());
-//            String vehicleType = json.get("vehicleType").toString(); // Get vehicleType as a string
-
-            // Retrieve the vehicleType query parameter
-            String vehicleType = req.getParameter("vehicleType");
-
-            // Log the vehicleType for debugging
-            System.out.println("Received vehicleType from frontend: " + vehicleType);
-
-            // Validate the vehicleType
-            if (vehicleType == null || vehicleType.isEmpty()) {
-                response.add("message", "vehicleType parameter is missing or empty");
-                response.add("code", 400); // Bad request
-                writer.print(response.build());
-                writer.close();
-                return;
-            }
-
-            try (Connection connection = ds.getConnection();
-                 PreparedStatement statement = connection.prepareStatement("SELECT * FROM vehicle WHERE vehicleType = ? AND status = 'available'")) {
-
-                statement.setString(1, vehicleType); // Use setString
-                ResultSet resultSet = statement.executeQuery();
-
-                JsonArrayBuilder availableVehiclesArray = Json.createArrayBuilder();
-
-                while (resultSet.next()) {
-                    JsonObjectBuilder vehicle = Json.createObjectBuilder();
-                    vehicle.add("vehicleId", resultSet.getInt("vehicleId"));
-                    vehicle.add("VehicleNumber", resultSet.getString("VehicleNumber"));
-                    vehicle.add("vehicleType", resultSet.getString("vehicleType")); // Use getString
-                    vehicle.add("passengerCount", resultSet.getString("passengerCount"));
-                    vehicle.add("pricePerKm", resultSet.getString("pricePerKm"));
-                    vehicle.add("vehicleBrand", resultSet.getString("vehicleBrand"));
-                    vehicle.add("status", resultSet.getString("status"));
-                    vehicle.add("vehicleModel", resultSet.getString("vehicleModel"));
-
-                    availableVehiclesArray.add(vehicle);
-                }
-
-                response.add("data", availableVehiclesArray);
-                response.add("message", "success");
-                response.add("code", 200);
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace(); // Log the exception for debugging
-            response.add("message", "Internal server error");
-            response.add("code", 500);
-        } finally {
-            writer.print(response.build());
-            writer.close();
-        }
-    }
-
-
-/*    private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-//        Jws<Claims> claims = isValidAdminJWT(req, resp);
-        JsonObjectBuilder response = Json.createObjectBuilder();
-        PrintWriter writer = resp.getWriter();
-        resp.setContentType("application/json");
-
-        BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
-
-        try (Connection connection = ds.getConnection();
-             PreparedStatement statement = connection.prepareStatement("SELECT DISTINCT vehicleType FROM vehicle");
-             ResultSet resultSet = statement.executeQuery()) {
-
-            JsonArrayBuilder vehicleTypesArray = Json.createArrayBuilder();
-
-            while (resultSet.next()) {
-//                vehicleTypesArray.add(resultSet.getInt("vehicleType"));
-                String vehicleType = resultSet.getString("vehicleType");
-                vehicleTypesArray.add(vehicleType);
-            }
-
-            response.add("data", vehicleTypesArray);
-            response.add("message", "success");
-            response.add("code", 200);
-
-        } catch (Exception e) {
-            e.printStackTrace(); // Log the exception for debugging
-            response.add("message", "Internal server error");
-            response.add("code", 500);
-        } finally {
-            writer.print(response.build());
-            writer.close();
-        }
-    }*/
-private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-    JsonObjectBuilder response = Json.createObjectBuilder();
-    PrintWriter writer = resp.getWriter();
-    resp.setContentType("application/json");
-
-    BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
-
-    try (Connection connection = ds.getConnection();
-         PreparedStatement statement = connection.prepareStatement("SELECT DISTINCT vehicleType, pricePerKm FROM vehicle");
-         ResultSet resultSet = statement.executeQuery()) {
-
-        JsonArrayBuilder vehicleTypesArray = Json.createArrayBuilder();
-
-        while (resultSet.next()) {
-            JsonObjectBuilder vehicleTypeObject = Json.createObjectBuilder();
-            String vehicleType = resultSet.getString("vehicleType");
-            double pricePerKm = resultSet.getDouble("pricePerKm");
-
-            vehicleTypeObject.add("vehicleType", vehicleType);
-            vehicleTypeObject.add("pricePerKm", pricePerKm);
-
-            vehicleTypesArray.add(vehicleTypeObject);
-        }
-
-        response.add("data", vehicleTypesArray);
-        response.add("message", "success");
-        response.add("code", 200);
-
-    } catch (Exception e) {
-        e.printStackTrace(); // Log the exception for debugging
-        response.add("message", "Internal server error");
-        response.add("code", 500);
-    } finally {
-        writer.print(response.build());
-        writer.close();
-    }
-}
-
-    private void getAllVehiclesbyVehicleId(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException{
+    private void getAllVehiclesbyVehicleId(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         Jws<Claims> claims = isValidAdminJWT(req, resp);
         JsonObjectBuilder response = Json.createObjectBuilder();
         PrintWriter writer = resp.getWriter();
         resp.setContentType("application/json");
+
+
 
         BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
 
         try {
             JSONObject json = jsonPasser(req);
 
-            int vehicleId = Integer.parseInt(json.get("vehicleId").toString());
+            int driverId = Integer.parseInt(json.get("driverId").toString());
 
             Connection connection = ds.getConnection();
-            PreparedStatement statement = connection.prepareStatement("select * from vehicle where vehicleId=?");
-            statement.setObject(1,vehicleId);
+            PreparedStatement statement = connection.prepareStatement("select * from driver where driverId=?");
+            statement.setObject(1,driverId);
             ResultSet resultSet = statement.executeQuery();
             JsonArrayBuilder driversArray = Json.createArrayBuilder();
             while (resultSet.next()) {
                 JsonObjectBuilder drivers = Json.createObjectBuilder();
-                drivers.add("vehicleId",resultSet.getInt(1));
-                drivers.add("VehicleNumber",resultSet.getString(2));
-                drivers.add("vehicleType",resultSet.getInt(3));
-                drivers.add("passengerCount",resultSet.getString(4));
-                drivers.add("pricePerKm", resultSet.getString(5));
-                drivers.add("vehicleBrand",resultSet.getString(6));
-                drivers.add("status",resultSet.getString(7));
-                drivers.add("vehicleModel",resultSet.getString(8));
+                drivers.add("driverId",resultSet.getInt(1));
+                drivers.add("name",resultSet.getString(2));
+                drivers.add("age",resultSet.getInt(3));
+                drivers.add("email",resultSet.getString(4));
+                drivers.add("licenseNumber", resultSet.getString(5));
+                drivers.add("nicNumber",resultSet.getString(6));
+                drivers.add("phoneNumber",resultSet.getString(7));
+                drivers.add("homeAddress",resultSet.getString(8));
+                drivers.add("status", resultSet.getString(9));
 
                 driversArray.add(drivers);
             }
@@ -226,9 +92,10 @@ private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp
             writer.close();
 
         }
+
     }
 
-    private void getAllVehicles(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    private void getAllDrivers(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         Jws<Claims> claims = isValidAdminJWT(req, resp);
         JsonObjectBuilder response = Json.createObjectBuilder();
         PrintWriter writer = resp.getWriter();
@@ -252,20 +119,22 @@ private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp
 
             try {
                 connection = ds.getConnection();
-                PreparedStatement statement = connection.prepareStatement("SELECT * FROM vehicle");
+                PreparedStatement statement = connection.prepareStatement("SELECT * FROM driver");
                 ResultSet resultSet = statement.executeQuery();
                 JsonArrayBuilder driversArray = Json.createArrayBuilder();
                 while (resultSet.next()) {
-                    JsonObjectBuilder vehicles = Json.createObjectBuilder();
-                    vehicles.add("vehicleId",resultSet.getInt(1));
-                    vehicles.add("vehicleNumber",resultSet.getString(2));
-                    vehicles.add("vehicleType",resultSet.getString(3));
-                    vehicles.add("passengerCount",resultSet.getInt(4));
-                    vehicles.add("pricePerKm", resultSet.getDouble(5));
-                    vehicles.add("vehicleBrand",resultSet.getString(6));
-                    vehicles.add("status",resultSet.getString(7));
-                    vehicles.add("vehicleModel",resultSet.getString(8));
-                    driversArray.add(vehicles);
+                    JsonObjectBuilder drivers = Json.createObjectBuilder();
+                    drivers.add("driverId",resultSet.getInt(1));
+                    drivers.add("name",resultSet.getString(2));
+                    drivers.add("age",resultSet.getInt(3));
+                    drivers.add("email",resultSet.getString(4));
+                    drivers.add("licenseNumber", resultSet.getString(5));
+                    drivers.add("nicNumber",resultSet.getString(6));
+                    drivers.add("phoneNumber",resultSet.getString(7));
+                    drivers.add("homeAddress",resultSet.getString(8));
+                    drivers.add("status", resultSet.getString(9));
+
+                    driversArray.add(drivers);
                 }
                 response.add("data", driversArray);
                 response.add("message", "success");
@@ -286,7 +155,9 @@ private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp
             }
 
         }
+
     }
+
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -316,12 +187,13 @@ private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp
                 // Debugging: Print the entire JSON payload
                 System.out.println("Received JSON: " + json.toString());
 
-                String vehicleNumber = (String) json.get("vehicleNumber");
-                String vehicleType = (String) json.get("vehicleType");
-                int passengerCount = Integer.parseInt((String) json.get("passengerCount"));
-                double pricePerKm = Double.parseDouble((String) json.get("pricePerKm"));
-                String vehicleBrand = (String) json.get("vehicleBrand");
-                String vehicleModel = (String) json.get("vehicleModel");
+                String name = (String) json.get("name");
+                int age = Integer.parseInt((String) json.get("age"));
+                String email = (String) json.get("email");
+                String licenseNumber = (String) json.get("licenseNumber");
+                String nicNumber = (String) json.get("nicNumber");
+                String phoneNumber = (String) json.get("phoneNumber");
+                String homeAddress = (String) json.get("homeAddress");
                 String status = (String) json.get("status"); // Ensure the key is "status"
 
                 // Debugging: Print the status value
@@ -345,8 +217,8 @@ private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp
 
                 try {
                     connection = ds.getConnection();
-                    PreparedStatement pstm = connection.prepareStatement("select * from vehicle where vehicleNumber=?");
-                    pstm.setObject(1, vehicleNumber);
+                    PreparedStatement pstm = connection.prepareStatement("select * from driver where licenseNumber=?");
+                    pstm.setObject(1, licenseNumber);
                     ResultSet rst = pstm.executeQuery();
 
                     if (rst.next()) {
@@ -374,15 +246,16 @@ private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp
 
                 try {
                     connection = ds.getConnection();
-                    PreparedStatement pstm = connection.prepareStatement("insert into vehicle values(?,?,?,?,?,?,?,?)");
+                    PreparedStatement pstm = connection.prepareStatement("insert into driver values(?,?,?,?,?,?,?,?,?)");
                     pstm.setObject(1, 0); // Assuming driveriD is auto-generated
-                    pstm.setObject(2, vehicleNumber);
-                    pstm.setObject(3, vehicleType);
-                    pstm.setObject(4, passengerCount);
-                    pstm.setObject(5, pricePerKm);
-                    pstm.setObject(6, vehicleBrand);
-                    pstm.setObject(7, status);
-                    pstm.setObject(8, vehicleModel);
+                    pstm.setObject(2, name);
+                    pstm.setObject(3, age);
+                    pstm.setObject(4, email);
+                    pstm.setObject(5, licenseNumber);
+                    pstm.setObject(6, nicNumber);
+                    pstm.setObject(7, phoneNumber);
+                    pstm.setObject(8, homeAddress);
+                    pstm.setObject(9, status); // Ensure status is correctly set
                     int i = pstm.executeUpdate();
 
                     if (i > 0) {
@@ -460,34 +333,25 @@ private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp
                 // Debugging: Print the entire JSON payload
                 System.out.println("Received JSON: " + json.toString());
 
-                int vehicleId = Integer.parseInt(json.get("vehicleId").toString());
+                int driverId = Integer.parseInt(json.get("driverId").toString());
                 // Assuming driverID is provided in the JSON
-                String vehicleNumber = (String) json.get("vehicleNumber");
-                String vehicleType = (String) json.get("vehicleType");
-//                int passengerCount = Integer.parseInt((String) json.get("passengerCount"));
-//                Double pricePerKm = Double.parseDouble((String) json.get("pricePerKm"));
+                String name = (String) json.get("name");
+//                int age = Integer.parseInt((String) json.get("age"));
 
-                Object passengerCountObj = json.get("passengerCount");
-                int passengerCount;
-                if (passengerCountObj instanceof Number) {
-                    passengerCount = ((Number) passengerCountObj).intValue();
+                Object ageObj = json.get("age");
+                int age;
+                if (ageObj instanceof Number) {
+                    age = ((Number) ageObj).intValue();
                 } else {
-                    passengerCount = Integer.parseInt(passengerCountObj.toString());
+                    age = Integer.parseInt(ageObj.toString());
                 }
 
-                Object pricePerKmObj = json.get("pricePerKm");
-                double pricePerKm;
-                if (pricePerKmObj instanceof Number) {
-                    pricePerKm = ((Number) pricePerKmObj).doubleValue();
-                } else {
-                    pricePerKm = Double.parseDouble(pricePerKmObj.toString());
-                }
-
-
-
-                String vehicleBrand = (String) json.get("vehicleBrand");
-                String status = (String) json.get("status");
-                String vehicleModel = (String) json.get("vehicleModel");
+                String email = (String) json.get("email");
+                String licenseNumber = (String) json.get("licenseNumber");
+                String nicNumber = (String) json.get("nicNumber");
+                String phoneNumber = (String) json.get("phoneNumber");
+                String homeAddress = (String) json.get("homeAddress");
+                String status = (String) json.get("status"); // Ensure the key is "status"
 
                 // Debugging: Print the status value
                 System.out.println("Status: " + status);
@@ -509,13 +373,13 @@ private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp
                     connection = ds.getConnection();
 
                     // Check if the driver exists
-                    pstmCheck = connection.prepareStatement("SELECT * FROM vehicle WHERE vehicleId = ?");
-                    pstmCheck.setInt(1, vehicleId);
+                    pstmCheck = connection.prepareStatement("SELECT * FROM driver WHERE driverId = ?");
+                    pstmCheck.setInt(1, driverId);
                     ResultSet rst = pstmCheck.executeQuery();
 
                     if (!rst.next()) {
                         // Driver does not exist
-                        response.add("message", "vehicle not found");
+                        response.add("message", "Driver not found");
                         response.add("code", 404); // 404 Not Found
                         resp.setStatus(404);
                         writer.print(response.build());
@@ -525,16 +389,16 @@ private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp
 
                     // Update the driver's information
                     pstmUpdateDriver = connection.prepareStatement(
-                            "UPDATE vehicle SET vehicleNumber = ?, vehicleType = ?, passengerCount = ?, pricePerKm = ?, vehicleBrand = ?, status = ?, vehicleModel = ? WHERE vehicleId = ?");
-
-                    pstmUpdateDriver.setString(1, vehicleNumber);
-                    pstmUpdateDriver.setString(2, vehicleType);
-                    pstmUpdateDriver.setInt(3, passengerCount);
-                    pstmUpdateDriver.setDouble(4, pricePerKm);
-                    pstmUpdateDriver.setString(5, vehicleBrand);
-                    pstmUpdateDriver.setString(6, status);
-                    pstmUpdateDriver.setString(7, vehicleModel);
-                    pstmUpdateDriver.setInt(8, vehicleId);
+                            "UPDATE driver SET name = ?, age = ?, email = ?, licenseNumber = ?, nicNumber = ?, phoneNumber = ?, homeAddress = ?, status = ? WHERE driverID = ?");
+                    pstmUpdateDriver.setString(1, name);
+                    pstmUpdateDriver.setInt(2, age);
+                    pstmUpdateDriver.setString(3, email);
+                    pstmUpdateDriver.setString(4, licenseNumber);
+                    pstmUpdateDriver.setString(5, nicNumber);
+                    pstmUpdateDriver.setString(6, phoneNumber);
+                    pstmUpdateDriver.setString(7, homeAddress);
+                    pstmUpdateDriver.setString(8, status);
+                    pstmUpdateDriver.setInt(9, driverId);
 
                     int i = pstmUpdateDriver.executeUpdate();
 
@@ -593,15 +457,15 @@ private void getAllVehicleTypes(HttpServletRequest req, HttpServletResponse resp
             PrintWriter writer = resp.getWriter();
             resp.setContentType("application/json");
 
-            int vehicleId = Integer.parseInt(req.getParameter("vehicleId"));
+            int driverId = Integer.parseInt(req.getParameter("driverId"));
             BasicDataSource ds = (BasicDataSource) getServletContext().getAttribute("ds");
             Connection connection = null;
             try {
                 connection = ds.getConnection();
                 connection.setAutoCommit(false); // Start transaction
 
-                PreparedStatement pstm = connection.prepareStatement("DELETE FROM vehicle WHERE vehicleId=?");
-                pstm.setObject(1, vehicleId);
+                PreparedStatement pstm = connection.prepareStatement("DELETE FROM driver WHERE driverId=?");
+                pstm.setObject(1, driverId);
                 int i1 = pstm.executeUpdate();
 
                 if (i1 > 0) {
